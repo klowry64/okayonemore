@@ -1,23 +1,29 @@
 name: CML Report
-on: push
+on: [push, pull_request]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.sha || github.sha }}
+  cancel-in-progress: true
 jobs:
   run:
-    runs-on: [ubuntu-latest]
+    continue-on-error: ${{ github.ref_name != 'main' }}
+    runs-on: ubuntu-latest
     steps:
       - uses: iterative/setup-cml@v1
       - uses: iterative/setup-dvc@v1
       - uses: actions/checkout@v3
         with:
           fetch-depth: 2
+          ref: ${{ github.event.pull_request.head.sha }}
       - name: Generate metrics report
         env:
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cml ci
-          if [ $GITHUB_REF = refs/heads/main ]; then
+          if test $GITHUB_REF_NAME == main; then
             PREVIOUS_REF=HEAD~1
           else
             PREVIOUS_REF=main
+            git fetch --depth=1 origin $PREVIOUS_REF:$PREVIOUS_REF
           fi
 
           dvc plots diff $PREVIOUS_REF workspace \
@@ -41,4 +47,8 @@ jobs:
           ${dvc_report}
           EOF
 
-          cml comment create --publish --pr=false report.md
+          if test ${{ github.event_name }} = pull_request; then
+            cml comment update --pr report.md
+          else
+            cml comment create report.md
+          fi
