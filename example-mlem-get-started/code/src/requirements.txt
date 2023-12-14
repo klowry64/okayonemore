@@ -1,3 +1,5 @@
 pandas
 scikit-learn
 mlem[dvc,dvc-azure,dvc-s3,fastapi,heroku]
+aiohttp>=3.9.0 # not directly required, pinned by Snyk to avoid a vulnerability
+numpy>=1.22.2 # not directly required, pinned by Snyk to avoid a vulnerability
